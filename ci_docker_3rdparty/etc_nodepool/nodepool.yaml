@@ -1,0 +1,16 @@
+zookeeper-servers:
+  - host: zk
+
+labels:
+  - name: ubuntu-xenial
+
+providers:
+  - name: static-vms
+    driver: static
+    pools:
+      - name: main
+        nodes:
+          - name: ip_address_of_static_machine
+            labels: ubuntu-xenial
+            host-key: "ssh-ed25519 AAlZDI1NTE5AAAAIFHNJI6/poqqv/zy0v4pJRDmCLwdUMMCIrrNAcgtKelO"
+            username: username

@@ -1,0 +1,13 @@
+- tenant:
+    name: warsteiners
+    source:
+      gerrit:
+        untrusted-projects:
+          - openstack/ci-sandbox
+      zuul-ci.org:
+        config-projects:
+          - zuul-config
+        untrusted-projects:
+          - zuul-jobs:
+              include:
+                - job

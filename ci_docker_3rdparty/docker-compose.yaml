@@ -1,0 +1,86 @@
+# Version 2 is the latest that is supported by docker-compose in
+# Ubuntu Xenial.
+version: '2'
+
+services:
+  zk:
+    image: zookeeper
+  mysql:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: zuul
+      MYSQL_USER: zuul
+      MYSQL_PASSWORD: secret
+  scheduler:
+    depends_on:
+      - zk
+      - mysql
+    environment:
+      no_proxy: "${no_proxy},gerrit"
+    command: "sh -c 'ansible-playbook /var/playbooks/scheduler.yaml; zuul-scheduler -d'"
+    image: zuul/zuul-scheduler
+    volumes:
+      - "./etc_zuul/:/etc/zuul/:z"
+      - "./playbooks/:/var/playbooks/:z"
+      - "sshkey:/var/ssh:z"
+      - /var/lib/zuul
+  web:
+    command: "zuul-web -d"
+    depends_on:
+      - scheduler
+      - mysql
+    ports:
+      - "9000:9000"
+    image: zuul/zuul-web
+    volumes:
+      - "./etc_zuul/:/etc/zuul/:z"
+  executor:
+    privileged: true
+    environment:
+      no_proxy: "${no_proxy},gerrit"
+    command: "sh -c 'ansible-playbook /var/playbooks/executor.yaml; zuul-executor -d'"
+    depends_on:
+      - scheduler
+    image: zuul/zuul-executor
+    volumes:
+      - "./etc_zuul/:/etc/zuul/:z"
+      - "./playbooks/:/var/playbooks/:z"
+      - "sshkey:/var/ssh:z"
+      - "logs:/srv/static/logs:z"
+  node:
+    build:
+      dockerfile: node-Dockerfile
+      context: ./
+      args:
+        http_proxy: "${http_proxy}"
+        https_proxy: "${http_proxy}"
+        no_proxy: "${no_proxy}"
+    volumes:
+      - "nodessh:/root/.ssh:z"
+  launcher:
+    command: "nodepool-launcher -d"
+    depends_on:
+      - zk
+    image: zuul/nodepool-launcher
+    volumes:
+      - "./etc_nodepool/:/etc/nodepool/:z"
+    ports:
+      - "8022:8022"
+  logs:
+    build:
+      dockerfile: logs-Dockerfile
+      context: ./
+      args:
+        http_proxy: "${http_proxy}"
+        https_proxy: "${http_proxy}"
+        no_proxy: "${no_proxy}"
+    ports:
+      - "8000:80"
+    volumes:
+      - "logs:/usr/local/apache2/htdocs:z"
+
+volumes:
+  sshkey:
+  nodessh:
+  logs:
